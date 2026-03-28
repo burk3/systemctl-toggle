@@ -1,5 +1,5 @@
 {
-  description = "A Nix-flake-based Go development environment";
+  description = "a quick tool to toggle systemd services";
 
   inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # unstable Nixpkgs
 
@@ -7,8 +7,6 @@
     { self, ... }@inputs:
 
     let
-      goVersion = 26; # Change this to update the whole stack
-
       supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -19,12 +17,7 @@
           system:
           f {
             inherit system;
-            pkgs = import inputs.nixpkgs {
-              inherit system;
-              overlays = [
-                inputs.self.overlays.dev
-              ];
-            };
+            pkgs = import inputs.nixpkgs { inherit system; };
           }
         );
     in
@@ -33,24 +26,14 @@
         systemctl-toggle = final.callPackage ./package.nix { };
       };
 
-      overlays.dev = final: prev: {
-        go = final."go_1_${toString goVersion}";
-      };
-
       devShells = forEachSupportedSystem (
         { pkgs, system }:
         {
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
-              # go (version is specified by overlay)
               go
-
-              # goimports, godoc, etc.
               gotools
-
-              # https://github.com/golangci/golangci-lint
               golangci-lint
-
               self.formatter.${system}
               gh
             ];
@@ -61,7 +44,7 @@
       packages = forEachSupportedSystem (
         { pkgs, ... }:
         {
-          default = pkgs.systemctl-toggle;
+          default = pkgs.callPackage ./package.nix { };
         }
       );
 
